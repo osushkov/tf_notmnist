@@ -131,7 +131,7 @@ def unpickle(pickle_files):
             with open(pickle_file, 'rb') as f:
                 letter_data = pickle.load(f)
                 labels.append(label)
-                data.append(letter_data
+                data.append(letter_data)
         except Exception as e:
             print('Unable to process data from', pickle_file, ':', e)
             raise
@@ -151,7 +151,7 @@ def validation_split(labels, data, validation_ratio):
     validation_
 
 
-def merge_datasets(pickle_files, validation_ratio):
+def split_datasets(labels, data, validation_ratio):
   num_classes = len(pickle_files)
   valid_dataset, valid_labels = make_arrays(valid_size, image_size)
   train_dataset, train_labels = make_arrays(train_size, image_size)
@@ -195,8 +195,17 @@ test_filename = maybe_download('notMNIST_small.tar.gz', 8458043)
 train_folders = maybe_extract(train_filename)
 test_folders = maybe_extract(test_filename)
 
-train_datasets = maybe_pickle(train_folders, 45000)
-test_datasets = maybe_pickle(test_folders, 1800)
+train_data_filenames = maybe_pickle(train_folders, 45000)
+test_data_filenames = maybe_pickle(test_folders, 1800)
+
+train_labels, train_data = unpickle(train_data_filenames)
+test_lavels, test_data = unpickle(test_data_filenames)
+
+print train_labels
+print len(train_data)
+#valid_dataset, valid_labels, train_dataset, train_labels = \
+#    merge_datasets(train_data_filenames + test_data_filenames, 0.2)
+
 
 # train_data = []
 # for folder in train_folders:
