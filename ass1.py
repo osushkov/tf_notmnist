@@ -6,15 +6,13 @@ import tarfile
 from IPython.display import display, Image
 from scipy import ndimage
 from sklearn.linear_model import LogisticRegression
+from sklearn import datasets
 from six.moves.urllib.request import urlretrieve
 from six.moves import cPickle as pickle
 import matplotlib.image as mpimg
 
-print "hello world"
-
 url = 'http://commondatastorage.googleapis.com/books1000/'
 last_percent_reported = None
-
 
 def download_progress_hook(count, blockSize, totalSize):
   """A hook to report the progress of a download. This is mostly intended for users with
@@ -138,53 +136,37 @@ def unpickle(pickle_files):
 
     return labels, data
 
-def validation_split(labels, data, validation_ratio):
-    assert(len(labels) == len(data))
+def test_split(train_labels, train_data, test_labels, test_data, test_ratio):
+    unfolded_labels = np.empty(0, dtype=np.int32)
+    unfolded_data = np.empty((0, train_data[0].shape[1], train_data[0].shape[2]), dtype=np.float32)
 
-    all_size = len(labels)
-    validation_size = all_size // validation_ratio
-    train_size = all_size - validation_size
+    for i in range(len(train_labels)):
+        labels = np.full((train_data[i].shape[0]), train_labels[i], dtype=np.int32)
+        unfolded_labels = np.concatenate((unfolded_labels, labels), axis=0)
+        unfolded_data = np.concatenate((unfolded_data, train_data[i]), axis=0)
 
-    indices = [x for x in range(all_size)]
-    np.random.shuffle(indices)
+    for i in range(len(test_labels)):
+        labels = np.full((test_data[i].shape[0]), test_labels[i], dtype=np.int32)
+        unfolded_labels = np.concatenate((unfolded_labels, labels), axis=0)
+        unfolded_data = np.concatenate((unfolded_data, test_data[i]), axis=0)
 
-    validation_
+    print "unfolded labels: " + str(unfolded_labels.shape)
+    print "unfolded shape:" + str(unfolded_data.shape)
 
+    permutation = np.random.permutation(unfolded_labels.shape[0])
+    shuffled_dataset = unfolded_data[permutation,:,:]
+    shuffled_labels = unfolded_labels[permutation]
 
-def split_datasets(labels, data, validation_ratio):
-  num_classes = len(pickle_files)
-  valid_dataset, valid_labels = make_arrays(valid_size, image_size)
-  train_dataset, train_labels = make_arrays(train_size, image_size)
-  vsize_per_class = valid_size // num_classes
-  tsize_per_class = train_size // num_classes
+    test_length = int(shuffled_labels.shape[0] * test_ratio)
 
-  start_v, start_t = 0, 0
-  end_v, end_t = vsize_per_class, tsize_per_class
-  end_l = vsize_per_class+tsize_per_class
+    test_labels = shuffled_labels[:test_length]
+    test_data = shuffled_dataset[:test_length]
 
-  for label, pickle_file in enumerate(pickle_files):
-    try:
-      with open(pickle_file, 'rb') as f:
-        letter_set = pickle.load(f)
-        # let's shuffle the letters to have random validation and training set
-        np.random.shuffle(letter_set)
-        if valid_dataset is not None:
-          valid_letter = letter_set[:vsize_per_class, :, :]
-          valid_dataset[start_v:end_v, :, :] = valid_letter
-          valid_labels[start_v:end_v] = label
-          start_v += vsize_per_class
-          end_v += vsize_per_class
+    train_labels = shuffled_labels[test_length:]
+    train_data = shuffled_dataset[test_length:]
 
-        train_letter = letter_set[vsize_per_class:end_l, :, :]
-        train_dataset[start_t:end_t, :, :] = train_letter
-        train_labels[start_t:end_t] = label
-        start_t += tsize_per_class
-        end_t += tsize_per_class
-    except Exception as e:
-      print('Unable to process data from', pickle_file, ':', e)
-      raise
+    return train_labels, train_data, test_labels, test_data
 
-  return valid_dataset, valid_labels, train_dataset, train_labels
 
 num_classes = 10
 np.random.seed(133)
@@ -199,10 +181,37 @@ train_data_filenames = maybe_pickle(train_folders, 45000)
 test_data_filenames = maybe_pickle(test_folders, 1800)
 
 train_labels, train_data = unpickle(train_data_filenames)
-test_lavels, test_data = unpickle(test_data_filenames)
+test_labels, test_data = unpickle(test_data_filenames)
 
-print train_labels
-print len(train_data)
+train_labels, train_data, test_labels, test_data = \
+    test_split(train_labels, train_data, test_labels, test_data, 0.2)
+
+# for i in range(short_train_labels.shape[0]):
+#     print short_train_labels[i]
+#     imgplot = plt.imshow(short_train_data[i])
+#     plt.show()
+#     raw_input("Press Enter to continue...")
+
+train_data.shape = (train_data.shape[0], train_data.shape[1] * train_data.shape[2])
+test_data.shape = (test_data.shape[0], test_data.shape[1] * test_data.shape[2])
+
+print "train_labels shape: " + str(train_labels.shape)
+print "train_data shape: " + str(train_data.shape)
+print "test_labels shape: " + str(test_labels.shape)
+print "test_data shape: " + str(test_data.shape)
+
+short_train_data = train_data[:100000]
+short_train_labels = train_labels[:100000]
+
+logistic = LogisticRegression()
+print('LogisticRegression score: %f'
+      % logistic.fit(short_train_data, short_train_labels).score(test_data, test_labels))
+
+# print train_labels[0]
+# imgplot = plt.imshow(train_data[0])
+# plt.show()
+# raw_input("Press Enter to continue...")
+
 #valid_dataset, valid_labels, train_dataset, train_labels = \
 #    merge_datasets(train_data_filenames + test_data_filenames, 0.2)
 
