@@ -167,41 +167,66 @@ def test_split(train_labels, train_data, test_labels, test_data, test_ratio):
 
     return train_labels, train_data, test_labels, test_data
 
+def generate_train_and_test():
+    train_filename = maybe_download('notMNIST_large.tar.gz', 247336696)
+    test_filename = maybe_download('notMNIST_small.tar.gz', 8458043)
+
+    train_folders = maybe_extract(train_filename)
+    test_folders = maybe_extract(test_filename)
+
+    train_data_filenames = maybe_pickle(train_folders, 45000)
+    test_data_filenames = maybe_pickle(test_folders, 1800)
+
+    train_labels, train_data = unpickle(train_data_filenames)
+    test_labels, test_data = unpickle(test_data_filenames)
+
+    train_labels, train_data, test_labels, test_data = \
+        test_split(train_labels, train_data, test_labels, test_data, 0.1)
+
+    train_data.shape = (train_data.shape[0], train_data.shape[1] * train_data.shape[2])
+    test_data.shape = (test_data.shape[0], test_data.shape[1] * test_data.shape[2])
+
+    print "train_labels shape: " + str(train_labels.shape)
+    print "train_data shape: " + str(train_data.shape)
+    print "test_labels shape: " + str(test_labels.shape)
+    print "test_data shape: " + str(test_data.shape)
+
+    pickle_file = 'notMNIST.pickle'
+    try:
+        f = open(pickle_file, 'wb')
+        save_data = {
+            'train_labels': train_labels,
+            'train_data': train_data,
+            'test_labels': test_labels,
+            'test_data': test_data,
+        }
+        pickle.dump(save_data, f, pickle.HIGHEST_PROTOCOL)
+        f.close()
+    except Exception as e:
+        print('Unable to save data to', pickle_file, ':', e)
+        raise
+
+    return train_labels, train_data, test_labels, test_data
+
 
 num_classes = 10
 np.random.seed(133)
 
-train_filename = maybe_download('notMNIST_large.tar.gz', 247336696)
-test_filename = maybe_download('notMNIST_small.tar.gz', 8458043)
+pickle_file = 'notMNIST.pickle'
+if os.path.exists(pickle_file):
+    with open(pickle_file, 'rb') as f:
+        save_data = pickle.load(f)
+        train_labels = save_data['train_labels']
+        train_data = save_data['train_data']
+        test_labels = save_data['test_labels']
+        test_data = save_data['test_data']
+        del save_data
+else:
+    train_labels, train_data, test_labels, test_data = generate_train_and_test()
 
-train_folders = maybe_extract(train_filename)
-test_folders = maybe_extract(test_filename)
 
-train_data_filenames = maybe_pickle(train_folders, 45000)
-test_data_filenames = maybe_pickle(test_folders, 1800)
-
-train_labels, train_data = unpickle(train_data_filenames)
-test_labels, test_data = unpickle(test_data_filenames)
-
-train_labels, train_data, test_labels, test_data = \
-    test_split(train_labels, train_data, test_labels, test_data, 0.2)
-
-# for i in range(short_train_labels.shape[0]):
-#     print short_train_labels[i]
-#     imgplot = plt.imshow(short_train_data[i])
-#     plt.show()
-#     raw_input("Press Enter to continue...")
-
-train_data.shape = (train_data.shape[0], train_data.shape[1] * train_data.shape[2])
-test_data.shape = (test_data.shape[0], test_data.shape[1] * test_data.shape[2])
-
-print "train_labels shape: " + str(train_labels.shape)
-print "train_data shape: " + str(train_data.shape)
-print "test_labels shape: " + str(test_labels.shape)
-print "test_data shape: " + str(test_data.shape)
-
-short_train_data = train_data[:100000]
-short_train_labels = train_labels[:100000]
+short_train_data = train_data[:10000]
+short_train_labels = train_labels[:10000]
 
 logistic = LogisticRegression()
 print('LogisticRegression score: %f'
